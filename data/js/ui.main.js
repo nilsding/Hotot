@@ -559,24 +559,6 @@ function bind_tweet_action(id) {
         }
     });
 
-    if (!util.is_native_platform()) {
-        $(id).find('a[target]').click(function (ev) {
-            if (ev.which != 1 && ev.which != 2) {
-                return;
-            }
-
-            var link = $(this).attr('href');
-            if (conf.vars.platform === 'Chrome') {
-                chrome.tabs.create(
-                  { url: link, active: ev.which == 1 },
-                  function(){}
-                )
-                return false;
-            }
-        });
-    }
-
-
     $(id).find('a[full_text_id]').unbind().click(function (ev) {
         var full_text_id = $(this).attr('full_text_id');
         globals.network.do_request('GET', 

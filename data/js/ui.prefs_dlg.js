@@ -157,14 +157,6 @@ function load_settings() {
     $('#chk_prefs_use_anonymous_stat')
         .attr('checked', conf.settings.use_anonymous_stat)
         .prop('checked', conf.settings.use_anonymous_stat);
-    // chrome only
-    if (conf.vars.platform === 'Chrome') {
-        $('#chk_prefs_context_menu_integration')
-            .attr('checked'
-                , conf.settings.context_menu_integration)
-            .prop('checked'
-                , conf.settings.context_menu_integration);
-    }
     $('#tbox_prefs_shortcut_summon_hotot').attr('value'
         , conf.settings.shortcut_summon_hotot);
     // proxy

@@ -10,16 +10,7 @@ init:
 function init() {
     $('#context_menuitem_copy').click(
     function (event) {
-        if (!util.is_native_platform()) {
-            if (conf.vars.platform === 'Chrome') {
-                toast.set('Copied!').show(-1);
-                var sandbox = $('#sandbox').val(ui.ContextMenu.selected_string).select();
-                document.execCommand('copy');
-                sandbox.val('');
-            } else {
-                // pass
-            }
-        } else {
+        if (util.is_native_platform()) {
             hotot_action('action/set_clipboard_text/' + ui.ContextMenu.selected_string);
         }
         if (ui.ContextMenu.event_element) {

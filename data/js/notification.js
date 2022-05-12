@@ -30,11 +30,6 @@ function notify(title, summary, image, type) {
             + '/' + encodeURIComponent(title)
             + '/' + encodeURIComponent(summary)
             + '/' + encodeURIComponent(image));
-    } else if (conf.vars.platform == 'Chrome') {
-        var img_url = image? image: './image/ic64_hotot.png';
-        var notification = webkitNotifications.createNotification(img_url, title, summary);
-        notification.show();
-        setTimeout(function() {notification.cancel()}, 5000);
     }
 },
 

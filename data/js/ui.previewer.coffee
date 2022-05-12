@@ -12,13 +12,6 @@ class Previewer
       if ev.which != 1 && ev.which != 2
           @close()
           return
-      if conf.vars.platform == 'Chrome'
-          chrome.tabs.create(
-            { url: @link.attr('href'), active: ev.which == 1 },
-            ()->
-          )
-          @close()
-          return false
       @close()
     )
 

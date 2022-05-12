@@ -106,28 +106,12 @@ function quit() {
                 ui.Slider.save_state();
             }
             conf.save_prefs(conf.current_name, function(){
-                if (!util.is_native_platform()) {
-                    if (conf.vars.platform === 'Chrome') {
-                        chrome.tabs.getCurrent(function (tab) {
-                            chrome.tabs.remove(tab.id);
-                        });
-                    } else {
-                        // pass
-                    }
-                } else {
+                if (util.is_native_platform()) {
                     hotot_action('system/quit');
                 }
             });
         } else {
-            if (!util.is_native_platform()) {
-                if (conf.vars.platform === 'Chrome') {
-                    chrome.tabs.getCurrent(function (tab) {
-                        chrome.tabs.remove(tab.id);
-                    });
-                } else {
-                    // pass
-                }
-            } else {
+            if (util.is_native_platform()) {
                 hotot_action('system/quit');
             }
         }
@@ -270,8 +254,6 @@ function hotot_log(label, content) {
         if (util.is_native_platform()) {
             hotot_action('action/log/' + encodeURIComponent(label)
                 + '/' + encodeURIComponent(content));
-        } else if (conf.vars.platform == 'Chrome') {
-            console.log('[' + label + '] ' + content);
         }
     }
 }
@@ -740,33 +722,9 @@ function on_load_finish() {
                 }
             });
             });
-        // 7. run track code
-        procs.push(function () {
-            if (conf.settings.use_anonymous_stat) {
-               track({
-                   'platform': conf.vars.platform,
-                   'version': conf.vars.version,
-                   'autologin': conf.settings.sign_in_automatically,
-                   'lang': window.navigator.language,
-                   'localeDate': new Date().toString()
-               });
-            }
-            $(window).dequeue('_on_load_finish');
-        });
         $(window).queue('_on_load_finish', procs);
         $(window).dequeue('_on_load_finish');
     }
-}
-
-function track(vars) {
-    var url = 'http://stat.hotot.org/?';
-    var arr = [];
-    for (var k in vars) {
-        arr.push(k + '=' + vars[k]);
-    }
-    url += arr.join('&');
-    new Image().src = url;
-    return;
 }
 
 function syncMyself() {

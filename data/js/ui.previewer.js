@@ -21,14 +21,6 @@
           _this.close();
           return;
         }
-        if (conf.vars.platform === 'Chrome') {
-          chrome.tabs.create({
-            url: _this.link.attr('href'),
-            active: ev.which === 1
-          }, function() {});
-          _this.close();
-          return false;
-        }
         return _this.close();
       });
     }

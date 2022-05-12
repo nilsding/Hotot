@@ -28,41 +28,31 @@ function change(code, callback) {
         code = 'en';
     }
     i18n.current = code;
-    if (conf.vars.platform == 'Chrome' && !i18n.forced) {
+    $.getJSON('_locales/' + code + '/messages.json',
+    function (result) {
+        hotot_log('i18n', 'Use locale: ' + code);
+        i18n.load_dict(result);
         i18n.trans_html();
         ui.Template.update_trans();
         if (callback != undefined)
             callback();
-    } else {
-        $.getJSON('_locales/' + code + '/messages.json',
+    }).error(function(jqXHR, txt, err){
+        hotot_log('i18n', txt);
+        hotot_log('i18n', 'Load messages "'+ code +'" failed. Use default locale: '+i18n.default_locale);
+        $.getJSON('_locales/en/messages.json',
         function (result) {
-            hotot_log('i18n', 'Use locale: ' + code);
             i18n.load_dict(result);
             i18n.trans_html();
             ui.Template.update_trans();
             if (callback != undefined)
                 callback();
-        }).error(function(jqXHR, txt, err){
-            hotot_log('i18n', txt);
-            hotot_log('i18n', 'Load messages "'+ code +'" failed. Use default locale: '+i18n.default_locale);
-            $.getJSON('_locales/en/messages.json',
-            function (result) {
-                i18n.load_dict(result);
-                i18n.trans_html();
-                ui.Template.update_trans();
-                if (callback != undefined)
-                    callback();
-            });
         });
+    });
 
-        $.getScript('_locales/' + code + '/timestring.js')
-            .always(function () {
-                moment.lang(false);
-            });
-    }
-    if (conf.vars.platform == 'Chrome') {
-        $('#tbox_status_speech').attr('lang', i18n.current.replace('_', '-'));
-    }
+    $.getScript('_locales/' + code + '/timestring.js')
+        .always(function () {
+            moment.lang(false);
+        });
 },
 
 load_dict:
@@ -72,14 +62,10 @@ function load_dict(new_dict) {
 
 get_message:
 function get_message(msg) {
-    if (conf.vars.platform === 'Chrome' && !i18n.forced) {
-        return chrome.i18n.getMessage(msg);
+    if (i18n.dict != null && i18n.dict.hasOwnProperty(msg)) {
+        return i18n.dict[msg].message;
     } else {
-        if (i18n.dict != null && i18n.dict.hasOwnProperty(msg)) {
-            return i18n.dict[msg].message;
-        } else {
-            return '';
-        }
+        return '';
     }
 },
 
