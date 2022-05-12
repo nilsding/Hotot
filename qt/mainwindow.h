@@ -17,8 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #include "common.h"
 
@@ -27,26 +26,12 @@
 #include <QSystemTrayIcon>
 #include <QFontDatabase>
 
-// Meego
-#ifdef MEEGO_EDITION_HARMATTAN
-#include <MApplicationWindow>
-#endif
-
-class QWebView;
-class QWebInspector;
+class QWebEngineView;
 struct TrayIconInterface;
-class KStatusNotifierItem;
 
-#ifdef MEEGO_EDITION_HARMATTAN
-typedef MApplicationWindow ParentWindow;
-#else
-typedef QMainWindow ParentWindow;
-#endif
-
-class QGraphicsWebView;
 class HototWebPage;
 
-class MainWindow : public ParentWindow
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
@@ -56,21 +41,15 @@ public:
     void triggerVisible();
     void activate();
     void unreadAlert(QString number);
-    void setEnableDeveloperTool(bool e);
     void setSignIn(bool sign);
 
 protected Q_SLOTS:
     void loadFinished(bool ok);
     void notifyLoadFinished();
     void onLinkHovered(const QString & link, const QString & title, const QString & textContent );
-    void showDeveloperTool();
     void exit();
     void compose();
-#ifdef MEEGO_EDITION_HARMATTAN
-    void contentSizeChanged();
-#else
     void toggleMinimizeToTray(bool checked);
-#endif
 
 protected:
     void forceActivateWindow();
@@ -78,9 +57,8 @@ protected:
     bool isStartMinimized();
     bool isAutoSignIn();
     void closeEvent(QCloseEvent *evnet);
-#ifndef MEEGO_EDITION_HARMATTAN
     void changeEvent(QEvent *event);
-#endif
+
     QString extraFonts();
     QString extraExtensions();
     QString extraThemes();
@@ -88,25 +66,15 @@ protected:
 
 private:
     HototWebPage* m_page;
-#ifndef MEEGO_EDITION_HARMATTAN
-    QWebView* m_webView;
-#else
-    QGraphicsWebView* m_webView;
-#endif
+    QWebEngineView* m_webView;
     QMenu* m_menu;
     TrayIconInterface* m_tray;
     QAction* m_actionShow;
     QAction* m_actionExit;
     QAction* m_actionDev;
     QAction* m_actionCompose;
-#ifndef MEEGO_EDITION_HARMATTAN
     QAction* m_actionMinimizeToTray;
-#endif
-    QWebInspector* m_inspector;
-    QFontDatabase m_fontDB;
     QString m_confDir;
     bool m_signIn;
     bool m_firstLoad;
 };
-
-#endif // MAINWINDOW_H

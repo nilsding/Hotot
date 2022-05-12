@@ -69,5 +69,5 @@ void QtTrayBackend::trayIconClicked(QSystemTrayIcon::ActivationReason reason)
 
 void QtTrayBackend::unreadAlert(QString number)
 {
-    m_trayicon->setToolTip(i18n("%1 unread Messages").arg(number));
+    m_trayicon->setToolTip(tr("%1 unread Messages").arg(number));
 }

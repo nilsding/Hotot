@@ -2,6 +2,8 @@
 
 #include "formpost.h"
 
+#include <QRandomGenerator>
+
 FormPost::FormPost(QNetworkAccessManager* manager)
     : QObject(0)
 {
@@ -88,9 +90,10 @@ void FormPost::addFile(QString fieldName, QString fileName, QString mime)
 QNetworkReply * FormPost::postData(QNetworkRequest& request)
 {
     QString crlf = "\r\n";
-    qsrand(QDateTime::currentDateTime().toTime_t());
-    QString b = QVariant(qrand()).toString() + QVariant(qrand()).toString()
-                + QVariant(qrand()).toString();
+
+    QString b = QString("%1isgreaterthan%2")
+        .arg(QRandomGenerator::global()->generate64())
+        .arg(QRandomGenerator::global()->generate64());
     QString boundary = "---------------------------" + b;
     QString endBoundary = crlf + "--" + boundary + "--" + crlf;
     QString contentType = "multipart/form-data; boundary=" + boundary;

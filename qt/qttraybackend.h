@@ -17,8 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef QTTRAY_BACKEND_H
-#define QTTRAY_BACKEND_H
+#pragma once
 
 // Qt
 #include <QSystemTrayIcon>
@@ -43,5 +42,3 @@ private:
     MainWindow* m_mainWindow;
     QSystemTrayIcon* m_trayicon;
 };
-
-#endif

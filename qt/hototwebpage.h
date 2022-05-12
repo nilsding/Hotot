@@ -17,18 +17,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef HOTOTWEBPAGE_H
-#define HOTOTWEBPAGE_H
+#pragma once
 
 #include "common.h"
 
 // Qt
-#include <QWebPage>
+#include <QWebEnginePage>
 #include <QByteArray>
 
 class HototRequest;
 class MainWindow;
-class HototWebPage : public QWebPage
+class HototWebPage : public QWebEnginePage
 {
     Q_OBJECT
 public:
@@ -36,14 +35,11 @@ public:
 protected Q_SLOTS:
     void requestFinished(HototRequest* request, QByteArray result, QString uuid , bool error);
 protected:
-    virtual bool acceptNavigationRequest(QWebFrame * frame, const QNetworkRequest & request, NavigationType type);
-    virtual void javaScriptAlert(QWebFrame * frame, const QString & msg);
-#ifdef MEEGO_EDITION_HARMATTAN
-    virtual bool javaScriptConfirm(QWebFrame *frame, const QString &msg);
-#endif
+    virtual bool acceptNavigationRequest(const QUrl& url, NavigationType type, bool isMainFrame) override;
+    virtual void javaScriptAlert(const QUrl& securityOrigin, const QString & msg) override;
     bool handleUri(const QString& string);
 private:
     MainWindow* m_mainWindow;
-};
 
-#endif // HototWebPage_H
+    QVariant evaluateJavaScript(const QString& js);
+};

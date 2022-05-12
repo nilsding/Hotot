@@ -22,20 +22,6 @@
 // Qt
 #include <QApplication>
 
-// KDE
-#ifdef HAVE_KDE
-#include <KAboutData>
-#include <KApplication>
-#include <KCmdLineOptions>
-#include <KUniqueApplication>
-#include <KDebug>
-#endif
-
-// Meego
-#ifdef MEEGO_EDITION_HARMATTAN
-#include <MApplication>
-#endif
-
 // System
 #include <stdio.h>
 
@@ -45,66 +31,23 @@
 void Usage()
 {
     printf("Usage: hotot-qt [options]\n"
-           "\t\t-d\tEnable Develope Tool\n"
            "\t\t-h\tShow this help\n"
           );
 }
 
 int main(int argc, char *argv[])
 {
-    bool enableDeveloper = false;
-
-#ifdef HAVE_KDE
-
-    KAboutData aboutData("hotot",                                        // internal name
-                         "hotot",                                     // catalog name
-                         ki18n("Hotot"),                            // program name
-                         "0.9.7",                             // app version
-                         ki18n("Lightweight, Flexible Microblogging"),  // short description
-                         KAboutData::License_GPL_V2,                   // license
-                         ki18n("(c) 2009-2012 Shellex Wai\n"),   // copyright
-                         KLocalizedString(),
-                         "http://www.hotot.org/",                   // home page
-                         "https://github.com/shellex/Hotot/issues"               // address for bugs
-                        );
-
-    aboutData.addAuthor(ki18n("Shellex Wai"),       ki18n("Developer and Artwork"), "5h3ll3x@gmail.com");
-    aboutData.addAuthor(ki18n("Jiahua Huang"),      ki18n("Developer"),             "jhuangjiahua" "@" "gmail" "." "com");
-    aboutData.addAuthor(ki18n("Jimmy Xu"),          ki18n("Developer"),             "xu.jimmy.wrk" "@" "gmail" "." "com");
-    aboutData.addAuthor(ki18n("Tualatrix Chou"),    ki18n("Developer"),             "tualatrix" "@" "gmail" "." "com");
-    aboutData.addAuthor(ki18n("Xu Zhen"),           ki18n("Developer"),             "xnreformer" "@" "gmail" "." "com");
-    aboutData.addAuthor(ki18n("Evan"),              ki18n("Artwork"),               "www.freemagi.com");
-    aboutData.addAuthor(ki18n("Marguerite Su"),     ki18n("Document"),              "admin"  "@" "doublechou.pp.ru");
-
-    KCmdLineOptions options;
-    options.add("d");
-    options.add("dev", ki18n("Enable developer Tool"));
-    KCmdLineArgs::init(argc, argv, &aboutData);
-
-    KCmdLineArgs::addCmdLineOptions(options);
-    KCmdLineArgs* args = KCmdLineArgs::parsedArgs();
-
-    enableDeveloper = args->isSet("dev");
-
-    KApplication a;
-#else
 #if !defined(Q_OS_WIN32) && !defined(Q_OS_MAC)
     setlocale(LC_ALL, "");
     bindtextdomain("hotot", LOCALEDIR);
     bind_textdomain_codeset("hotot", "UTF-8");
     textdomain("hotot");
 #endif
-#ifdef MEEGO_EDITION_HARMATTAN
-    MApplication a(argc, argv);
-#else
     QApplication a(argc, argv);
 
     int opt;
-    while ((opt = getopt(argc, argv, "sdh")) != -1) {
+    while ((opt = getopt(argc, argv, "sh")) != -1) {
         switch (opt) {
-        case 'd':
-            enableDeveloper = true;
-            break;
         case 'h':
             Usage();
             return 0;
@@ -114,16 +57,7 @@ int main(int argc, char *argv[])
             break;
         }
     }
-#endif
-
-#endif
     MainWindow w;
-    w.setEnableDeveloperTool(enableDeveloper);
-
-#ifdef MEEGO_EDITION_HARMATTAN
-    w.setOrientationAngle(M::Angle0);
-    w.setOrientationAngleLocked(true);
-#endif
 
     return a.exec();
 }

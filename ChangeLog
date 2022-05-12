@@ -1,3 +1,8 @@
+Version 0.10.0
+- switch to semver, somewhat
+- remove Gtk/Chrome builds
+- rework Qt build for Qt6
+
 The Latest Stable Version is 0.9.8.9
 The Latest Development Version is 0.9.8.8
 

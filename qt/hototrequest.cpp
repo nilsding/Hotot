@@ -29,18 +29,16 @@ HototRequest::HototRequest(const QString& uuid,
                            const QMap<QString, QVariant>& request_params,
                            const QMap<QString, QVariant>& request_headers,
                            const QList<QVariant>& request_files,
-                           const QString&  userAgent,
-                           QNetworkAccessManager* manager,
-                           QObject* parent) : QObject(parent),
-    m_uuid(uuid),
-    m_method(request_method),
-    m_url(request_url),
-    m_params(request_params),
-    m_headers(request_headers),
-    m_files(request_files),
-    m_userAgent(userAgent)
+                           QObject* parent)
+    : QObject(parent)
+    , m_manager(new QNetworkAccessManager(this))
+    , m_uuid(uuid)
+    , m_method(request_method)
+    , m_url(request_url)
+    , m_params(request_params)
+    , m_headers(request_headers)
+    , m_files(request_files)
 {
-    m_manager = manager;
 }
 
 HototRequest::~HototRequest()

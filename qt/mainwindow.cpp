@@ -21,14 +21,12 @@
 
 // Qt
 #include <QApplication>
-#include <QGraphicsWebView>
 #include <QDesktopServices>
-#include <QWebDatabase>
-#include <QWebSettings>
+#include <QWebEngineSettings>
 #include <QDir>
-#include <QWebSecurityOrigin>
 #include <QDebug>
-#include <QWebFrame>
+#include <QWebEngineView>
+#include <QWebEnginePage>
 #include <QNetworkProxy>
 #include <QSettings>
 #include <QFontDatabase>
@@ -38,101 +36,63 @@
 #include <QMenu>
 #include <QToolTip>
 #include <QCursor>
-#include <QWebInspector>
 #include <QGraphicsView>
 #include <QTimer>
-
-#ifdef HAVE_KDE
-#include <KWindowSystem>
-#include <KIO/AccessManager>
-#endif
-
-#ifdef MEEGO_EDITION_HARMATTAN
-#include <MApplicationPage>
-#endif
+#include <QCloseEvent>
 
 // Hotot
 #include "mainwindow.h"
 #include "hototwebpage.h"
 #include "trayiconinterface.h"
 #include "qttraybackend.h"
-#ifdef HAVE_KDE
-#include "kdetraybackend.h"
-#endif
 
 MainWindow::MainWindow(QWidget *parent) :
-    ParentWindow(parent),
+    QMainWindow(parent),
     m_page(0),
-    m_webView(new QWebView),
-#ifndef MEEGO_EDITION_HARMATTAN
-    m_actionMinimizeToTray(new QAction(i18n("&Minimize to Tray"), this)),
-#endif
-    m_inspector(0),
-    m_fontDB(),
+    m_webView(new QWebEngineView),
+    m_actionMinimizeToTray(new QAction(tr("&Minimize to Tray"), this)),
     m_signIn(false),
     m_firstLoad(true)
 {
 #ifdef Q_OS_UNIX
     chdir(PREFIX);
 #endif
-    setWindowTitle(i18n("Hotot"));
+    setWindowTitle(tr("Hotot"));
     setWindowIcon(QIcon::fromTheme("hotot_qt", QIcon("share/hotot/image/ic64_hotot.png")));
     qApp->setWindowIcon(QIcon::fromTheme("hotot_qt", QIcon("share/hotot/image/ic64_hotot.png")));
-#ifndef MEEGO_EDITION_HARMATTAN
     this->resize(QSize(640, 480));
     this->setCentralWidget(m_webView);
     this->setMinimumSize(QSize(400, 400));
-#else
-    MApplicationPage* page = new MApplicationPage;
-    page->setCentralWidget(m_webView);
-    page->setComponentsDisplayMode(MApplicationPage::AllComponents,
-                                           MApplicationPageModel::Hide);
-    page->setAutoMarginsForComponentsEnabled(false);
-    page->resize(page->exposedContentRect().size());
-    page->appear(this, MSceneWindow::DestroyWhenDone);
-    page->setPannable(false);
-#endif
 
     m_menu = new QMenu(this);
 
-    m_actionCompose = new QAction(QIcon(), i18n("&Compose"), this);
+    m_actionCompose = new QAction(QIcon(), tr("&Compose"), this);
     connect(m_actionCompose, SIGNAL(triggered()), this, SLOT(compose()));
     m_menu->addAction(m_actionCompose);
     m_actionCompose->setVisible(false);
-#ifndef MEEGO_EDITION_HARMATTAN
+
     QSettings settings("hotot-qt", "hotot");
     m_actionMinimizeToTray->setCheckable(true);
     m_actionMinimizeToTray->setChecked(settings.value("minimizeToTray", false).toBool());
     connect(m_actionMinimizeToTray, SIGNAL(toggled(bool)), this, SLOT(toggleMinimizeToTray(bool)));
     m_menu->addAction(m_actionMinimizeToTray);
-#endif
-    m_actionShow = new QAction(QIcon(), i18n("Show &MainWindow"), this);
+
+    m_actionShow = new QAction(QIcon(), tr("Show &MainWindow"), this);
     connect(m_actionShow, SIGNAL(triggered()), this, SLOT(show()));
     m_menu->addAction(m_actionShow);
 
-    m_actionExit = new QAction(QIcon::fromTheme("application-exit"), i18n("&Exit"), this);
+    m_actionExit = new QAction(QIcon::fromTheme("application-exit"), tr("&Exit"), this);
     m_actionExit->setShortcut(QKeySequence::Quit);
     connect(m_actionExit, SIGNAL(triggered()), this, SLOT(exit()));
     m_menu->addAction(m_actionExit);
 
-    m_actionDev = new QAction(QIcon::fromTheme("configure"), i18n("&Developer Tool"), this);
-    connect(m_actionDev, SIGNAL(triggered()), this, SLOT(showDeveloperTool()));
-
-#ifdef HAVE_KDE
-    m_tray = new KDETrayBackend(this);
-#else
     m_tray = new QtTrayBackend(this);
-#endif
 
     m_tray->setContextMenu(m_menu);
-#ifndef MEEGO_EDITION_HARMATTAN
+
     addAction(m_actionExit);
-#endif
 
     m_page = new HototWebPage(this);
-#ifdef HAVE_KDE
-    m_page->setNetworkAccessManager(new KIO::Integration::AccessManager(m_page));
-#endif
 
 #ifdef Q_OS_UNIX
     QDir dir(QDir::homePath().append("/.config/hotot-qt"));
@@ -145,28 +105,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_confDir = dir.absolutePath();
 
-    QWebSettings::setOfflineStoragePath(dir.absolutePath());
-    QWebSettings::setOfflineStorageDefaultQuota(15 * 1024 * 1024);
-
     m_webView->setPage(m_page);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::LocalContentCanAccessFileUrls, true);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, true);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::LocalStorageEnabled, true);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineStorageDatabaseEnabled, true);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::JavascriptCanOpenWindows, true);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::JavascriptCanAccessClipboard, true);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::JavascriptEnabled, true);
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::AcceleratedCompositingEnabled, true);
-
-
-    m_inspector = new QWebInspector;
-    m_inspector->setPage(m_page);
-
-#ifdef MEEGO_EDITION_HARMATTAN
-    connect(page, SIGNAL(exposedContentRectChanged()), this, SLOT(contentSizeChanged()));
-    m_page->setPreferredContentsSize(page->exposedContentRect().size().toSize());
-    m_webView->setResizesToContents(true);
-#endif
+    m_page->settings()->setAttribute(QWebEngineSettings::LocalContentCanAccessFileUrls, true);
+    m_page->settings()->setAttribute(QWebEngineSettings::LocalContentCanAccessRemoteUrls, true);
+    m_page->settings()->setAttribute(QWebEngineSettings::LocalStorageEnabled, true);
+    m_page->settings()->setAttribute(QWebEngineSettings::JavascriptCanOpenWindows, true);
+    m_page->settings()->setAttribute(QWebEngineSettings::JavascriptCanAccessClipboard, true);
+    m_page->settings()->setAttribute(QWebEngineSettings::JavascriptEnabled, true);
 
 #ifdef Q_OS_UNIX
     m_webView->load(QUrl("file://" PREFIX "/share/hotot/index.html"));
@@ -178,25 +123,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_page, SIGNAL(linkHovered(QString, QString, QString)), this, SLOT(onLinkHovered(QString, QString, QString)));
 }
 
-#ifdef MEEGO_EDITION_HARMATTAN
-void MainWindow::contentSizeChanged()
-{
-    m_page->setPreferredContentsSize(currentPage()->exposedContentRect().size().toSize());
-}
-#endif
-
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-#ifndef MEEGO_EDITION_HARMATTAN
     if (isCloseToExit()) {
         exit();
     } else {
         event->ignore();
         hide();
     }
-#else
-    ParentWindow::closeEvent(event);
-#endif
 }
 
 void MainWindow::exit()
@@ -205,40 +139,67 @@ void MainWindow::exit()
 }
 
 bool MainWindow::isCloseToExit() {
-    QVariant var = m_webView->page()->currentFrame()->evaluateJavaScript("conf.settings.close_to_exit");
-    if (var.isValid()) {
-        return var.toBool();
-    } else {
-        return false;
+    QAtomicInt atomint = -1;
+    bool retval = false;
+
+    m_webView->page()->runJavaScript("conf.settings.close_to_exit", [&atomint, &retval](const QVariant& result) {
+        if (result.isValid()) {
+            retval = result.toBool();
+        }
+        atomint++;
+    });
+
+    while (atomint == -1)
+    {
+        QApplication::processEvents();
     }
+
+    return retval;
 }
 
 bool MainWindow::isStartMinimized() {
-    QVariant mini = m_webView->page()->currentFrame()->evaluateJavaScript("conf.settings.starts_minimized");
-    if (mini.isValid()) {
-        return mini.toBool();
-    } else {
-        return false;
+    QAtomicInt atomint = -1;
+    bool retval = false;
+
+    m_webView->page()->runJavaScript("conf.settings.starts_minimized", [&atomint, &retval](const QVariant& result) {
+        if (result.isValid()) {
+            retval = result.toBool();
+        }
+        atomint++;
+    });
+
+    while (atomint == -1)
+    {
+        QApplication::processEvents();
     }
+
+    return retval;
 }
 
 bool MainWindow::isAutoSignIn() {
-    QVariant mini = m_webView->page()->currentFrame()->evaluateJavaScript("conf.settings.sign_in_automatically");
-    if (mini.isValid()) {
-        return mini.toBool();
+    QAtomicInt atomint = -1;
+    bool retval = false;
+
+    m_webView->page()->runJavaScript("conf.settings.sign_in_automatically", [&atomint, &retval](const QVariant& result) {
+        if (result.isValid()) {
+            retval = result.toBool();
+        }
+        atomint++;
+    });
+
+    while (atomint == -1)
+    {
+        QApplication::processEvents();
     }
-    else
-        return false;
+
+    return retval;
 }
 
 MainWindow::~MainWindow()
 {
-#ifndef MEEGO_EDITION_HARMATTAN
     QSettings settings("hotot-qt", "hotot");
     settings.setValue("geometry", saveGeometry());
     settings.setValue("windowState", saveState());
-#endif
-    delete m_inspector;
 }
 
 void MainWindow::loadFinished(bool ok)
@@ -260,8 +221,8 @@ void MainWindow::loadFinished(bool ok)
                  .arg(extraThemes())
                  .arg(QLocale::system().name());
 
-        m_webView->page()->currentFrame()->evaluateJavaScript(confString);
-        m_webView->page()->currentFrame()->evaluateJavaScript(
+        m_webView->page()->runJavaScript(confString);
+        m_webView->page()->runJavaScript(
             "overlay_variables(hotot_qt_variables);"
             "globals.load_flags = 1;");
 
@@ -280,57 +241,21 @@ void MainWindow::notifyLoadFinished()
     QSettings settings("hotot-qt", "hotot");
     restoreGeometry(settings.value("geometry").toByteArray());
     restoreState(settings.value("windowState").toByteArray());
-#ifndef MEEGO_EDITION_HARMATTAN
     if (!isStartMinimized() || !isAutoSignIn()) {
         show();
     }
-#else
-    show();
-#endif
 }
 
 void MainWindow::forceActivateWindow()
 {
 #ifndef Q_WS_MAC
-#ifdef HAVE_KDE
-    const int currentDesktop = KWindowSystem::currentDesktop();
-    KWindowSystem::setOnDesktop( winId(), currentDesktop );
-    KWindowSystem::forceActiveWindow( winId() );
-#else
     activateWindow();
-#endif
 #endif
 }
 
 void MainWindow::triggerVisible()
 {
 #ifndef Q_WS_MAC
-#ifdef HAVE_KDE
-    if( !isVisible() )
-    {
-        setVisible( true );
-        forceActivateWindow();
-    }
-    else
-    {
-        if( !isMinimized() )
-        {
-            if( !isActiveWindow() ) // not minimised and without focus
-            {
-                forceActivateWindow();
-            }
-            else // Amarok has focus
-            {
-                setVisible( false );
-            }
-        }
-        else // Amarok is minimised
-        {
-            setWindowState( windowState() & ~Qt::WindowMinimized );
-            forceActivateWindow();
-        }
-    }
-#else
     if (isVisible()) {
         setVisible(!isVisible());
     }
@@ -339,8 +264,6 @@ void MainWindow::triggerVisible()
         setWindowState(windowState() & ~Qt::WindowMinimized);
         forceActivateWindow();
     }
-
-#endif
 #else
     show();
 #endif
@@ -356,11 +279,7 @@ void MainWindow::activate()
     if (!isActiveWindow()) {
         if (!isVisible()) {
 #ifndef Q_WS_MAC
-#ifdef HAVE_KDE
-            KWindowSystem::activateWindow( winId() );
-#else
             setVisible(true);
-#endif
 #else
             show();
 #endif
@@ -373,32 +292,15 @@ void MainWindow::unreadAlert(QString number)
     m_tray->unreadAlert(number);
 }
 
-void MainWindow::setEnableDeveloperTool(bool e)
-{
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, e);
-    if (e)
-        m_menu->insertAction(m_actionExit, m_actionDev);
-    else
-        m_menu->removeAction(m_actionDev);
-    m_tray->setContextMenu(m_menu);
-}
-
-void MainWindow::showDeveloperTool()
-{
-    m_inspector->setVisible(true);
-}
-
-#ifndef MEEGO_EDITION_HARMATTAN
 void MainWindow::toggleMinimizeToTray(bool checked)
 {
     QSettings settings("hotot-qt", "hotot");
     settings.setValue("minimizeToTray", checked);
 }
 
-
 void MainWindow::changeEvent(QEvent *event)
 {
-    ParentWindow::changeEvent(event);
+    QMainWindow::changeEvent(event);
     if (event->type() == QEvent::WindowStateChange) {
         if (m_actionMinimizeToTray->isChecked() && isMinimized()) {
             QTimer::singleShot(0, this, SLOT(hide()));
@@ -406,7 +308,6 @@ void MainWindow::changeEvent(QEvent *event)
         }
     }
 }
-#endif
 
 void MainWindow::onLinkHovered(const QString & link, const QString & title, const QString & textContent )
 {
@@ -417,7 +318,7 @@ void MainWindow::onLinkHovered(const QString & link, const QString & title, cons
 
 QString MainWindow::extraFonts()
 {
-    return toJSArray(m_fontDB.families());
+    return toJSArray(QFontDatabase::families());
 }
 
 QString MainWindow::extraThemes()
@@ -483,9 +384,8 @@ void MainWindow::setSignIn(bool sign)
 void MainWindow::compose()
 {
     if (m_signIn) {
-        m_webView->page()->currentFrame()->evaluateJavaScript("ui.StatusBox.open();");
+        m_webView->page()->runJavaScript("ui.StatusBox.open();");
         show();
         forceActivateWindow();
     }
 }
-

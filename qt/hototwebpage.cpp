@@ -28,11 +28,7 @@
 #include <QNetworkProxy>
 #include <QDesktopServices>
 #include <QFileDialog>
-#include <QWebFrame>
-
-#ifdef MEEGO_EDITION_HARMATTAN
-#include <MMessageBox>
-#endif
+#include <QWebEnginePage>
 
 // Hotot
 #include "hototwebpage.h"
@@ -40,17 +36,15 @@
 #include "mainwindow.h"
 
 HototWebPage::HototWebPage(MainWindow *window, QObject* parent) :
-    QWebPage(parent)
+    QWebEnginePage(parent)
 {
     m_mainWindow = window;
-    networkAccessManager()->setProxy(QNetworkProxy::DefaultProxy);
 }
 
-bool HototWebPage::acceptNavigationRequest(QWebFrame * frame, const QNetworkRequest & request, NavigationType type)
+bool HototWebPage::acceptNavigationRequest(const QUrl& url, NavigationType type, bool isMainFrame)
 {
-    Q_UNUSED(frame);
     Q_UNUSED(type);
-    return handleUri(request.url().toString());
+    return handleUri(url.toString());
 }
 
 bool HototWebPage::handleUri(const QString& originmsg)
@@ -73,50 +67,9 @@ bool HototWebPage::handleUri(const QString& originmsg)
                 m_mainWindow->unreadAlert(number);
             } else if (method == "load_settings") {
                 QString settingString = QUrl::fromPercentEncoding(msg.section("/", 2, -1).toUtf8());
-                currentFrame()->evaluateJavaScript("hotot_qt = " + settingString + ";");
-                QString proxyType = currentFrame()->evaluateJavaScript("hotot_qt.proxy_type").toString();
-                QNetworkProxy proxy;
-                QNetworkAccessManager* nm = NULL;
-#ifdef HAVE_KDE
-                if (proxyType == "none") {
-                    nm = new QNetworkAccessManager(this);
-                }
-#else
-                if (proxyType == "system")
-                {
-                    nm = new QNetworkAccessManager(this);
-                    QList<QNetworkProxy> proxies = QNetworkProxyFactory::systemProxyForQuery();
-                    proxy = proxies[0];
-                }
-#endif
-                if (proxyType == "http" || proxyType == "socks") {
-                    nm = new QNetworkAccessManager(this);
-                    bool proxyAuth = currentFrame()->evaluateJavaScript("hotot_qt.proxy_auth").toBool();
-                    int proxyPort = currentFrame()->evaluateJavaScript("hotot_qt.proxy_port").toInt();
-                    QString proxyHost = currentFrame()->evaluateJavaScript("hotot_qt.proxy_host").toString();
-                    QString proxyAuthName = currentFrame()->evaluateJavaScript("hotot_qt.proxy_auth_name").toString();
-                    QString proxyAuthPassword = currentFrame()->evaluateJavaScript("hotot_qt.proxy_auth_password").toString();
+                runJavaScript("hotot_qt = " + settingString + ";");
 
-                    proxy = QNetworkProxy(proxyType == "socks" ? QNetworkProxy::Socks5Proxy : QNetworkProxy::HttpProxy,
-                                        proxyHost,
-                                        proxyPort);
-
-                    if (proxyAuth) {
-                        proxy.setUser(proxyAuthName);
-                        proxy.setPassword(proxyAuthPassword);
-                    }
-                }
-                if (proxy.type() != QNetworkProxy::NoProxy) {
-                    QNetworkProxy::setApplicationProxy(proxy);
-                }
-
-                if (nm != NULL) {
-                    QNetworkAccessManager* oldnm = networkAccessManager();
-                    oldnm->setParent(NULL);
-                    oldnm->deleteLater();
-                    nm->setProxy(QNetworkProxy::DefaultProxy);
-                    setNetworkAccessManager(nm);
-                }
+                // unfortunately proxy settings seem to be gone with the blink-based webview :-(
             } else if (method == "sign_in") {
                 m_mainWindow->setSignIn(true);
             } else if (method == "sign_out") {
@@ -135,14 +88,14 @@ bool HototWebPage::handleUri(const QString& originmsg)
                     QStringList fileNames = dialog.selectedFiles();
                     if (fileNames.size() > 0) {
                         QString callback = msg.section("/", 2, 2);
-                        currentFrame()->evaluateJavaScript(QString("%1(\"%2\")").arg(callback, QUrl::fromLocalFile(fileNames[0]).toString().replace("file://", "")));
+                        evaluateJavaScript(QString("%1(\"%2\")").arg(callback, QUrl::fromLocalFile(fileNames[0]).toString().replace("file://", "")));
                     }
                 }
             } else if (method == "save_avatar") {
             } else if (method == "log") {
                 qDebug() << msg;
             } else if (method == "paste_clipboard_text") {
-                triggerAction(QWebPage::Paste);
+                triggerAction(QWebEnginePage::Paste);
             } else if (method == "set_clipboard_text") {
                 QClipboard *clipboard = QApplication::clipboard();
                 if (clipboard)
@@ -150,13 +103,13 @@ bool HototWebPage::handleUri(const QString& originmsg)
             }
         } else if (type == "request") {
             QString json = QUrl::fromPercentEncoding(msg.section("/", 1, -1).toUtf8());
-            currentFrame()->evaluateJavaScript(QString("hotot_qt_request_json = %1 ;").arg(json));
-            QString request_uuid = currentFrame()->evaluateJavaScript(QString("hotot_qt_request_json.uuid")).toString();
-            QString request_method = currentFrame()->evaluateJavaScript(QString("hotot_qt_request_json.method")).toString();
-            QString request_url = currentFrame()->evaluateJavaScript(QString("hotot_qt_request_json.url")).toString();
-            QMap<QString, QVariant> request_params = currentFrame()->evaluateJavaScript(QString("hotot_qt_request_json.params")).toMap();
-            QMap<QString, QVariant> request_headers = currentFrame()->evaluateJavaScript(QString("hotot_qt_request_json.headers")).toMap();
-            QList<QVariant> request_files = currentFrame()->evaluateJavaScript(QString("hotot_qt_request_json.files")).toList();
+            evaluateJavaScript(QString("hotot_qt_request_json = %1 ;").arg(json));
+            QString request_uuid = evaluateJavaScript(QString("hotot_qt_request_json.uuid")).toString();
+            QString request_method = evaluateJavaScript(QString("hotot_qt_request_json.method")).toString();
+            QString request_url = evaluateJavaScript(QString("hotot_qt_request_json.url")).toString();
+            QMap<QString, QVariant> request_params = evaluateJavaScript(QString("hotot_qt_request_json.params")).toMap();
+            QMap<QString, QVariant> request_headers = evaluateJavaScript(QString("hotot_qt_request_json.headers")).toMap();
+            QList<QVariant> request_files = evaluateJavaScript(QString("hotot_qt_request_json.files")).toList();
 
             HototRequest* request = new HototRequest(
                 request_uuid,
@@ -164,9 +117,7 @@ bool HototWebPage::handleUri(const QString& originmsg)
                 request_url,
                 request_params,
                 request_headers,
-                request_files,
-                userAgentForUrl(request_url),
-                networkAccessManager());
+                request_files);
             connect(request, SIGNAL(requestFinished(HototRequest*, QByteArray, QString, bool)), this, SLOT(requestFinished(HototRequest*, QByteArray, QString, bool)));
             if (!request->doRequest())
                 delete request;
@@ -183,24 +134,11 @@ bool HototWebPage::handleUri(const QString& originmsg)
     return false;
 }
 
-void HototWebPage::javaScriptAlert(QWebFrame *frame, const QString &msg)
+void HototWebPage::javaScriptAlert(const QUrl& securityOrigin, const QString & msg)
 {
-    Q_UNUSED(frame);
+    Q_UNUSED(securityOrigin);
     handleUri(msg);
 }
-
-#ifdef MEEGO_EDITION_HARMATTAN
-bool HototWebPage::javaScriptConfirm(QWebFrame *frame, const QString &msg)
-{
-    Q_UNUSED(frame);
-    MMessageBox *messageBox = new MMessageBox(msg, M::YesButton|M::NoButton);
-    //int result = messageBox->exec(m_mainWindow);
-    messageBox->appear(MSceneWindow::DestroyWhenDone);
-    int result = 0;
-    return (result == MDialog::Accepted);
-}
-
-#endif
 
 void HototWebPage::requestFinished(HototRequest* request, QByteArray result, QString uuid , bool error)
 {
@@ -209,7 +147,7 @@ void HototWebPage::requestFinished(HototRequest* request, QByteArray result, QSt
         QString scripts = QString("widget.DialogManager.alert('%1', '%2');\n"
                                   "globals.network.error_task_table['%3']('');\n"
                                  ).arg("Ooops, an Error occurred!", strresult, uuid);
-        currentFrame()->evaluateJavaScript(scripts);
+        evaluateJavaScript(scripts);
     } else {
         QString scripts;
         if (strresult.startsWith("[") || strresult.startsWith("{"))
@@ -218,7 +156,25 @@ void HototWebPage::requestFinished(HototRequest* request, QByteArray result, QSt
         else
             scripts = QString("globals.network.success_task_table['%1']('%2');"
                              ).arg(uuid, strresult);
-        currentFrame()->evaluateJavaScript(scripts);
+        evaluateJavaScript(scripts);
     }
     request->deleteLater();
+}
+
+QVariant HototWebPage::evaluateJavaScript(const QString& js)
+{
+    QAtomicInt atomint = -1;
+    QVariant retval;
+
+    runJavaScript(js, [&atomint, &retval](const QVariant& result) {
+        retval = result;
+        atomint++;
+    });
+
+    while (atomint == -1)
+    {
+        QApplication::processEvents();
+    }
+
+    return retval;
 }

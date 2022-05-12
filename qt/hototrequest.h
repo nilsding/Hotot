@@ -17,8 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef HOTOTREQUEST_H
-#define HOTOTREQUEST_H
+#pragma once
 
 #include <QObject>
 #include <QMap>
@@ -40,8 +39,6 @@ public:
                  const QMap<QString, QVariant>& request_params,
                  const QMap<QString, QVariant>& request_headers,
                  const QList<QVariant>& request_files,
-                 const QString&  userAgent,
-                 QNetworkAccessManager* manager,
                  QObject* parent = 0);
     ~HototRequest();
 
@@ -59,7 +56,4 @@ private:
     QNetworkReply* m_reply;
     QMap<QString, QVariant> m_headers;
     QList<QVariant> m_files;
-    QString m_userAgent;
 };
-
-#endif

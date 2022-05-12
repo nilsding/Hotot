@@ -17,8 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef TRAYICON_BACKEND_H
-#define TRAYICON_BACKEND_H
+#pragma once
 
 // Qt
 #include <QObject>
@@ -35,5 +34,3 @@ public:
 };
     
 Q_DECLARE_INTERFACE(TrayIconInterface, "org.hotot.TrayIconInterface")
-
-#endif

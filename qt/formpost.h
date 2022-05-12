@@ -1,7 +1,7 @@
 /* from : http://code.google.com/p/bungeni-transcriber/ */
 
-#ifndef __FORMPOST_H__
-#define __FORMPOST_H__
+#pragma once
+
 #include <QString>
 #include <QByteArray>
 #include <QFile>
@@ -45,5 +45,3 @@ private:
 private slots:
     void readData(QNetworkReply * r);
 };
-
-#endif

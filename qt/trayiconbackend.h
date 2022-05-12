@@ -17,8 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef TRAYICON_BACKEND_H
-#define TRAYICON_BACKEND_H
+#pragma once
 
 // Qt
 #include <QObject>
@@ -34,5 +33,3 @@ public:
     virtual void showMessage(QString type, QString title, QString message, QString image);
     virtual void unreadAlert(QString number);
 };
-
-#endif

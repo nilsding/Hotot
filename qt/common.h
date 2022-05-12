@@ -17,8 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef COMMON_H
-#define COMMON_H
+#pragma once
 
 #include <QtGlobal>
 #include "config.h"
@@ -29,17 +28,4 @@
 
 #ifndef Q_OS_WIN32
 #include <unistd.h>
-#endif
-
-#ifdef HAVE_KDE
-#   include <KLocalizedString>
-#else
-#   if defined(Q_OS_WIN32) || defined(Q_OS_MAC)
-#       define i18n(x) tr(x)
-#   else
-#       include <libintl.h>
-#       define i18n(x) QString::fromUtf8(gettext(x))
-#   endif
-#endif
-
 #endif

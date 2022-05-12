@@ -1,8 +1,6 @@
 *~
-build*/
+/build*
 .*
-!.git*
-.git/
 *.tar.*
 *.kdev4
 *.kate-swp
@@ -12,4 +10,4 @@ astyle.sh
 cscope.*
 *.part
 *.swp
-*.pyc
+compile_commands.json
