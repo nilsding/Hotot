@@ -45,11 +45,8 @@ exts_enabled: [],
 
 extra_exts_path: {},
 
-prefs: null,
-
 init:
 function init() {
-    ext.prefs = window.openDatabase('hotot.exts_prefs', '', 'Preferences of extensions', 10);
     // listeners: {listener_type: [callbacks ... ], ... };
     for (var i = 0x01; i < 0xff; i += 0x01) {
         ext.listeners[i] = [];
@@ -299,44 +296,31 @@ function add_tweet_more_menuitem(id) {
 
 ext.Preferences = function (prefs_name) {
     function init(prefs_name) {
-        ext.prefs.transaction(function (tx) {
-            tx.executeSql('CREATE TABLE IF NOT EXISTS "'+prefs_name+'" ("name" CHAR(64) PRIMARY KEY  NOT NULL  UNIQUE , "val" TEXT NOT NULL )', []);
-        });
+        // nothing to do here anymore, localStorage will be enough :-)
     }
 
     function get(key, callback) {
         var _this = this;
-        ext.prefs.transaction(function (tx) {
-            tx.executeSql('SELECT name, val FROM "'+ _this.name+'" WHERE name=?', [key],
-            function (tx, rs) {
-                if (callback) {
-                    var val = null;
-                    if (rs.rows.length != 0) {
-                        val = JSON.parse(rs.rows.item(0).val);
-                    }
-                    callback(key, val);
-                }
-            },
-            function (tx, error) {
-                hotot_log('EXT', 'sql:'+ error.message);
-            });
-        });
+        var result = window.localStorage[`ext_prefs.${prefs_name}`];
+
+        if (callback) {
+            if (result == null) { // looks weird, but this also takes care of undefined ...
+                callback(key, null);
+                return;
+            }
+
+            callback(key, JSON.parse(result));
+        }
     }
 
     function set(key, val, callback) {
         val = JSON.stringify(val);
         var _this = this;
-        ext.prefs.transaction(function (tx) {
-            tx.executeSql('INSERT or REPLACE INTO "'+ _this.name+'" VALUES (?, ?)', [key, val],
-            function (tx, rs) {
-                if (callback) {
-                    callback(key, val);
-                }
-            },
-            function (tx, error) {
-                hotot_log('EXT', 'sql:'+ error.message);
-            });
-        });
+
+        window.localStorage[`ext_prefs.${prefs_name}`] = val;
+        if (callback) {
+            callback(key, val);
+        }
     }
     this.name = prefs_name;
     this.set = set;

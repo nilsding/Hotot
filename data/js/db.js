@@ -11,7 +11,6 @@ version: 3,
 
 init:
 function init (callback) {
-    db.database = window.openDatabase('hotot.cache', '', 'Cache of Hotot', 10);
     db.get_version(function (version) {
         var db_version = parseInt(version);
         if (db_version === 2) { // from 2 to 3
@@ -34,118 +33,73 @@ function init (callback) {
 
 create_sys:
 function create_sys(callback) {
-    db.database.transaction(function (tx) {
-    var procs = [
-    function () {
-        tx.executeSql('DROP TABLE IF EXISTS "Info"', [],
-        function () {
-            $(window).dequeue('_database');
-        });
-    },
-    function () {
-        tx.executeSql('DROP TABLE IF EXISTS "Profile"', [],
-        function () {
-            $(window).dequeue('_database');
-        });
-    },
-    function () {
-        tx.executeSql('CREATE TABLE IF NOT EXISTS "Info" ("key" CHAR(256) PRIMARY KEY  NOT NULL  UNIQUE , "value" TEXT NOT NULL )', [],
-            function () {
-                $(window).dequeue('_database');
-            });    
-    },
-    function () {
-        tx.executeSql('CREATE TABLE IF NOT EXISTS "Profile" ("name" CHAR(256) PRIMARY KEY  NOT NULL UNIQUE , "protocol" CHAR(64) NOT NULL , "preferences" TEXT NOT NULL, "order" INTEGER DEFAULT 0)', [],
-            function () {
-                $(window).dequeue('_database');
-            });    
-    },
-    function () {
-        tx.executeSql('INSERT or REPLACE INTO Info VALUES("settings", ?)', [JSON.stringify(conf.default_settings)], 
-        function () {
-            $(window).dequeue('_database');
-        });
-    },
-    function () {
-        if (typeof (callback) != 'undefined') {
-            callback();
-        }    
+    for (var x in window.localStorage) {
+        if (x.match(/^info\./)) {
+            window.localStorage.removeItem(x);
+        }
     }
-    ];
+    $(window).dequeue('_database');
+
+    for (var x in window.localStorage) {
+        if (x.match(/^profile\./)) {
+            window.localStorage.removeItem(x);
+        }
+    }
+    $(window).dequeue('_database');
+
+    window.localStorage["info.settings"] = JSON.stringify(conf.default_settings),
+    $(window).dequeue('_database');
+
+    if (typeof (callback) != 'undefined') {
+        callback();
+    }
+
     $(window).queue('_database', procs);
     $(window).dequeue('_database');
-    });
 },
 
 update_version:
 function update_version(callback) {
-    db.database.transaction(function (tx) {
-    var procs = [
-    function () {
-        tx.executeSql('INSERT or REPLACE INTO Info VALUES("version", ?)', [db.version], 
-        function () {
-            $(window).dequeue('_database');
-        });
-    },
-    function () {
-        if (typeof (callback) != 'undefined') {
-            callback();
-        }    
+    window.localStorage["info.version"] = db.version;
+    $(window).dequeue('_database');
+
+    if (typeof (callback) != 'undefined') {
+        callback();
     }
-    ];
+
     $(window).queue('_database', procs);
     $(window).dequeue('_database');
-    });
 },
 
 create_cache:
 function create_cache(callback) {
-    db.database.transaction(function (tx) {
-    var procs = [
-    function () {
-        tx.executeSql('DROP TABLE IF EXISTS "TweetCache"', [],
-        function () {
-            $(window).dequeue('_database');
-        });
-    },
-    function () {
-            tx.executeSql('DROP TABLE IF EXISTS "UserCache"', [],
-            function () {
-                $(window).dequeue('_database');
-            });
-    },
-    function () {
-            tx.executeSql('CREATE TABLE IF NOT EXISTS "TweetCache" ("id" CHAR(256) PRIMARY KEY  NOT NULL  UNIQUE , "status" NCHAR(140) NOT NULL, "json" TEXT NOT NULL )', [],
-            function () {
-                $(window).dequeue('_database');
-            });    
-    },
-    function () {
-            tx.executeSql('CREATE TABLE IF NOT EXISTS "UserCache" ("id" INTEGER PRIMARY KEY  AUTOINCREMENT  UNIQUE  DEFAULT 0, "user_id" CHAR(256) NOT NULL UNIQUE, "screen_name" CHAR(64) NOT NULL , "json" TEXT NOT NULL )', [],
-            function () {
-                $(window).dequeue('_database');
-            });    
-    },
-    function () {
-        if (typeof (callback) != 'undefined') {
-            callback();
-        }    
+    for (var x in window.localStorage) {
+        if (x.match(/^tweet_cache\./)) {
+            window.localStorage.removeItem(x);
+        }
     }
-    ];
+    $(window).dequeue('_database');
+
+    for (var x in window.localStorage) {
+        if (x.match(/^user_cache\./)) {
+            window.localStorage.removeItem(x);
+        }
+    }
+    $(window).dequeue('_database');
+
+    if (typeof (callback) != 'undefined') {
+        callback();
+    }
+
     $(window).queue('_database', procs);
     $(window).dequeue('_database');
-    });
 },
 
 dump_users:
 function dump_users(json_obj) {
     var dump_single_user = function (tx, user) {
         // update user obj
-        tx.executeSql('INSERT OR REPLACE INTO UserCache (user_id, screen_name, json) VALUES (?, ?, ?)', [user.id_str, user.screen_name, JSON.stringify(user)],
-        function (tx, rs) {},
-        function (tx, error) {
-            hotot_log('DB', 'INSERT ERROR: '+ error.code + ','+ error.message);
-        });
+        window.localStorage[`user_cache.${user.id_str}`] = JSON.stringify(user);
     };
     // dump users
     db.database.transaction(function (tx) {
@@ -159,19 +113,11 @@ function dump_users(json_obj) {
 dump_tweets:
 function dump_tweets(json_obj) {
     var dump_single_user = function (tx, user) {
-        tx.executeSql('INSERT OR REPLACE INTO UserCache (user_id, screen_name, json) VALUES (?, ?, ?)', [user.id_str, user.screen_name, JSON.stringify(user)],
-        function (tx, rs) {
-        },
-        function (tx, error) {
-            hotot_log('DB', 'INSERT ERROR: '+ error.code + ','+ error.message);
-        });
+        // update user obj
+        window.localStorage[`user_cache.${user.id_str}`] = JSON.stringify(user);
     };
     var dump_single_tweet = function (tx, tweet_obj) {
-        tx.executeSql('INSERT or REPLACE INTO TweetCache VALUES (?, ?, ?)', [tweet_obj.id_str, tweet_obj.text, JSON.stringify(tweet_obj)],
-        function (tx, rs) {},
-        function (tx, error) {
-            hotot_log('DB', 'INSERT ERROR: '+ error.code + ','+ error.message);
-        });
+        window.localStorage[`tweet_cache.${tweet_obj.id_str}`] = JSON.stringify(tweet_obj);
     };
 
     // dump tweets
@@ -197,22 +143,14 @@ function dump_tweets(json_obj) {
 
 get_version:
 function get_version(callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('SELECT * FROM sqlite_master WHERE type="table" and name="Info"',[],
-        function (tx, rs){
-            if (rs.rows.length == 0) {
-                callback(-1);
-            } else {
-                tx.executeSql('SELECT key, value FROM Info WHERE key="version"', [], 
-                function(tx, rs) {
-                    callback(rs.rows.item(0).value);
-                }, 
-                function (tx, err) {
-                    callback(-2);
-                });
-            }
-        });
-    });
+    const val = window.localStorage["info.version"];
+
+    if (val == null) {
+        callback(-1);
+        return;
+    }
+
+    callback(parseInt(val));
 },
 
 
@@ -318,132 +256,97 @@ function reduce_db () {
 
 save_option:
 function save_option(key, value, callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('INSERT or REPLACE INTO Info VALUES(?, ?)', [key, value], 
-        function (tx, rs) {
-            callback(true);
-        },
-        function (tx, error) {
-            callback(false);
-        }); 
-    });
+    window.localStorage[`info.${key}`] = value;
+    callback(true);
 },
 
 load_option:
 function load_option(key, callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('SELECT key, value FROM Info WHERE key=?', [key], 
-        function (tx, rs) {
-            callback(rs.rows.item(0).value);
-        },
-        function (tx, error) {
-            callback(null);
-        }); 
-    });
+    const val = window.localStorage[`info.${key}`];
+
+    if (val == null) {
+        callback(null);
+        return;
+    }
+
+    callback(val);
 },
 
 save_profile_prefs:
 function save_profile_prefs(name, json, callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('UPDATE Profile SET preferences=? WHERE name=?', [name, json], 
-        function (tx, rs) {
-            callback(true);
-        },
-        function (tx, error) {
-            callback(false);
-        }); 
-    });
+    const val = window.localStorage[`profile.${name}`];
+    var prof = JSON.parse(val);
+    prof.preferences = json;
+    window.localStorage[`profile.${name}`] = JSON.stringify(prof);
+    callback(true);
 },
 
 load_profile_prefs:
 function load_profile_prefs(name, callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('SELECT preferences FROM Profile WHERE name=?', [name], 
-        function (tx, rs) {
-            if (rs.rows.length == 0) {
-                callback('{}');
-            } else {
-                callback(rs.rows.item(0).preferences);
-            }
-        }); 
-    });
+    const val = window.localStorage[`profile.${name}`];
+
+    if (val == null) {
+        callback('{}');
+        return;
+    }
+
+    var prof = JSON.parse(json);
+    callback(prof.preferences);
 },
 
 add_profile:
 function add_profile(prefix, protocol, callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('INSERT INTO Profile VALUES(?, ?, ?, ?)', [prefix+'@'+protocol, protocol, JSON.stringify(conf.get_default_prefs(protocol)), 0], 
-        function (tx, rs) {
-            callback(true);
-        }, 
-        function (tx, error) {
-            callback(error);
-        }); 
+    const name = prefix+'@'+protocol;
+    window.localStorage[`profile.${name}`] = JSON.stringify({
+        "name":        name,
+        "protocol":    protocol,
+        "preferences": JSON.stringify(conf.get_default_prefs(protocol)),
+        "order":       0,
     });
+    callback(true);
 },
 
 remove_profile:
 function remove_profile(name, callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('DELETE FROM Profile WHERE name=?', [name], 
-        function (tx, rs) {
-            callback(true);
-        },
-        function (tx, error) {
-            callback(false);
-        }); 
-    });
+    window.localStorage.removeItem(`profile.${name}`);
+    callback(true);
 },
 
 modify_profile:
 function modify_profile(name, profile, callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('UPDATE Profile SET "name"=?, "protocol"=?, "preferences"=?, "order"=? WHERE "name"=?', [profile.name, profile.protocol, profile.preferences, profile.order, name], 
-        function (tx, rs) {
-            callback(true);
-        },
-        function (tx, error) {
-            callback(error);
-        }); 
+    window.localStorage[`profile.${name}`] = JSON.stringify({
+        "name":        profile.name,
+        "protocol":    profile.protocol,
+        "preferences": profile.preferences,
+        "order":       profile.order,
     });
+    callback(true);
 },
 
 get_profile:
 function get_profile(name, callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('SELECT * FROM Profile WHERE name=?', [name], 
-        function (tx, rs) {
-            if (rs.rows.length == 0) {
-                callback({});
-            } else {
-                callback({'name': rs.rows.item(0).name
-                        , 'protocol': rs.rows.item(0).protocol
-                        , 'preferences': rs.rows.item(0).preferences
-                        , 'order': rs.rows.item(0).order});
-            }
-        }); 
-    });
+    const val = window.localStorage[`profile.${name}`];
+
+    if (val == null) {
+        callback({});
+        return;
+    }
+
+    var prof = JSON.parse(json);
+    callback(prof);
 },
 
 get_all_profiles:
 function get_all_profiles(callback) {
-    db.database.transaction(function (tx) {
-        tx.executeSql('SELECT * FROM "Profile" ORDER BY "Profile"."order"', [], 
-        function (tx, rs) {
-            if (rs.rows.length == 0) {
-                callback([]);
-            } else {
-                var profs = [];
-                for (var i = 0, l = rs.rows.length; i < l; i += 1) {
-                    profs.push({'name': rs.rows.item(i).name
-                        , 'protocol': rs.rows.item(i).protocol
-                        , 'preferences': rs.rows.item(i).preferences
-                        , 'order': rs.rows.item(i).order});
-                }
-                callback(profs);
-            }
-        }); 
-    });
+    var profs = [];
+
+    for (var x in window.localStorage) {
+        if (x.match(/^profile\./)) {
+            console.log(x);
+            profs.push(JSON.parse(window.localStorage[x]));
+        }
+    }
+    callback(profs);
 }
 
 };
